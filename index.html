@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Code Runner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            background: #1e1e1e;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Main layout container */
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left sidebar for file management and controls */
+        .sidebar {
+            width: 250px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toolbar at top of sidebar */
+        .toolbar {
+            padding: 10px;
+            border-bottom: 1px solid #3e3e42;
+            background: #2d2d30;
+        }
+
+        .toolbar h2 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #cccccc;
+        }
+
+        /* Run button styling */
+        .run-btn {
+            width: 100%;
+            padding: 8px 16px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .run-btn:hover {
+            background: #1177bb;
+        }
+
+        /* File list in sidebar */
+        .file-list {
+            flex: 1;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.active {
+            background: #094771;
+            color: #ffffff;
+        }
+
+        /* Main editor and preview area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs for switching between editor and preview */
+        .tabs {
+            display: flex;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-right: 1px solid #3e3e42;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .tab:hover {
+            background: #37373d;
+        }
+
+        .tab.active {
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+
+        /* Content area that switches between editor and preview */
+        .content-area {
+            flex: 1;
+            position: relative;
+        }
+
+        /* Code editor textarea */
+        .editor {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 20px;
+            resize: none;
+            tab-size: 2;
+        }
+
+        /* Preview iframe container */
+        .preview-container {
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: none;
+        }
+
+        .preview-container.active {
+            display: block;
+        }
+
+        /* Preview iframe */
+        .preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Status bar at bottom */
+        .status-bar {
+            height: 22px;
+            background: #007acc;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left sidebar for project management -->
+        <div class="sidebar">
+            <div class="toolbar">
+                <h2>Web Code Runner</h2>
+                <button class="run-btn" onclick="runCode()">▶ Run Code</button>
+            </div>
+            
+            <!-- List of files in current project -->
+            <div class="file-list">
+                <div class="file-item active" onclick="switchFile('index.html')" data-file="index.html">
+                    📄 index.html
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content area -->
+        <div class="main-content">
+            <!-- Tabs for switching between editor and preview -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('editor')">Editor</div>
+                <div class="tab" onclick="switchTab('preview')">Preview</div>
+            </div>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Code editor -->
+                <textarea 
+                    class="editor" 
+                    id="editor" 
+                    placeholder="Start coding your HTML here..."
+                    oninput="saveCurrentFile()"
+                ></textarea>
+
+                <!-- Preview iframe -->
+                <div class="preview-container" id="preview-container">
+                    <iframe class="preview-frame" id="preview-frame"></iframe>
+                </div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="status-bar">
+                <span id="status-text">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state to manage our virtual file system
+        let currentProject = {
+            files: {
+                'index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Web Project</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Web Code Runner!</h1>
+        <p>This is your starting HTML file. Edit the code and click "Run Code" to see your changes!</p>
+        <button onclick="alert('Hello from JavaScript!')">Click me!</button>
+    </div>
+    
+    <script>
+        console.log('Your web project is running!');
+    </script>
+</body>
+</html>`
+            },
+            currentFile: 'index.html'
+        };
+
+        // Initialize the app when page loads
+        window.onload = function() {
+            loadProject();
+            updateEditor();
+            updateStatus('Project loaded');
+        };
+
+        // Load project from localStorage or use default
+        function loadProject() {
+            const saved = localStorage.getItem('webCodeRunner_project');
+            if (saved) {
+                try {
+                    currentProject = JSON.parse(saved);
+                    updateStatus('Project loaded from storage');
+                } catch (e) {
+                    updateStatus('Error loading project, using default');
+                }
+            }
+        }
+
+        // Save current project to localStorage
+        function saveProject() {
+            try {
+                localStorage.setItem('webCodeRunner_project', JSON.stringify(currentProject));
+                updateStatus('Project saved');
+            } catch (e) {
+                updateStatus('Error saving project');
+            }
+        }
+
+        // Update the editor with current file content
+        function updateEditor() {
+            const editor = document.getElementById('editor');
+            editor.value = currentProject.files[currentProject.currentFile] || '';
+        }
+
+        // Save the current file content from editor
+        function saveCurrentFile() {
+            const editor = document.getElementById('editor');
+            currentProject.files[currentProject.currentFile] = editor.value;
+            saveProject();
+        }
+
+        // Switch between different files (for future expansion)
+        function switchFile(fileName) {
+            // Save current file before switching
+            saveCurrentFile();
+            
+            // Switch to new file
+            currentProject.currentFile = fileName;
+            updateEditor();
+            
+            // Update UI
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-file="${fileName}"]`).classList.add('active');
+            
+            updateStatus(`Switched to ${fileName}`);
+        }
+
+        // Switch between editor and preview tabs
+        function switchTab(tabName) {
+            const editor = document.getElementById('editor');
+            const preview = document.getElementById('preview-container');
+            
+            // Update tab appearance
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (tabName === 'editor') {
+                editor.style.display = 'block';
+                preview.classList.remove('active');
+            } else {
+                editor.style.display = 'none';
+                preview.classList.add('active');
+            }
+        }
+
+        // Run the code in the preview iframe
+        function runCode() {
+            saveCurrentFile(); // Make sure latest changes are saved
+            
+            const iframe = document.getElementById('preview-frame');
+            const htmlContent = currentProject.files['index.html'] || '';
+            
+            // Create a blob URL for the HTML content
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            // Load the content in iframe
+            iframe.src = url;
+            
+            // Switch to preview tab automatically
+            switchTab('preview');
+            document.querySelector('.tab:nth-child(2)').classList.add('active');
+            document.querySelector('.tab:nth-child(1)').classList.remove('active');
+            
+            updateStatus('Code executed successfully');
+            
+            // Clean up the blob URL after a short delay
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        // Update status bar message
+        function updateStatus(message) {
+            document.getElementById('status-text').textContent = message;
+        }
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+S or Cmd+S to save
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveCurrentFile();
+                updateStatus('File saved');
+            }
+            
+            // Ctrl+Enter or Cmd+Enter to run
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+        });
+
+        // Auto-save every 30 seconds
+        setInterval(function() {
+            saveCurrentFile();
+        }, 30000);
+    </script>
+</body>
+</html>
