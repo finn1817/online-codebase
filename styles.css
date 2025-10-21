@@ -70,6 +70,23 @@ body {
     background: #1a9973;
 }
 
+.new-folder-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: #6a5acd; /* slate blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.new-folder-btn:hover {
+    background: #7a6be0;
+}
+
 .file-list {
     flex: 1;
     padding: 10px;
@@ -149,6 +166,58 @@ body {
     font-size: 12px;
     border-radius: 2px;
     width: 100%;
+}
+
+/* Folder tree */
+.folder-item {
+    padding: 6px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: #cccccc;
+}
+
+.folder-item:hover {
+    background: #2a2d2e;
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.folder-children {
+    margin-left: 14px;
+}
+
+.folder-icon::before { content: "📁"; }
+.folder-toggle { width: 12px; display: inline-block; color: #9aa0a6; }
+
+.folder-actions {
+    display: none;
+    gap: 4px;
+}
+
+.folder-item:hover .folder-actions {
+    display: flex;
+}
+
+.folder-action-btn {
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 10px;
+}
+
+.folder-action-btn:hover {
+    background: #3e3e42;
+    color: white;
 }
 
 .main-content {

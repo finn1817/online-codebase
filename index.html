@@ -13,6 +13,7 @@
                 <h2>Web Code Runner</h2>
                 <button class="run-btn" id="runBtn">▶ Run Code</button>
                 <button class="new-file-btn" id="newFileBtn">+ New File</button>
+                <button class="new-folder-btn" id="newFolderBtn">+ New Folder</button>
             </div>
             
             <div class="file-list">
@@ -73,6 +74,30 @@
             <div class="modal-buttons">
                 <button class="modal-btn secondary" id="cancelRename">Cancel</button>
                 <button class="modal-btn primary" id="confirmRename">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Folder Modal -->
+    <div id="newFolderModal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Folder</h3>
+            <input type="text" id="newFolderName" placeholder="Enter folder path (e.g., assets/images)">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelNewFolder">Cancel</button>
+                <button class="modal-btn primary" id="createNewFolder">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Folder Modal -->
+    <div id="renameFolderModal" class="modal">
+        <div class="modal-content">
+            <h3>Rename Folder</h3>
+            <input type="text" id="renameFolderName" placeholder="Enter new folder path">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelRenameFolder">Cancel</button>
+                <button class="modal-btn primary" id="confirmRenameFolder">Rename</button>
             </div>
         </div>
     </div>
@@ -215,6 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             let fileToRename = null;
+            let folderToRename = null;
+            // Initialize folders support if not present
+            if (!currentProject.folders) currentProject.folders = [];
+            if (!currentProject.expandedFolders) currentProject.expandedFolders = ['']; // root expanded
 
             // Get DOM elements
             const editor = document.getElementById('editor');
@@ -240,6 +269,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const confirmRenameBtn = document.getElementById('confirmRename');
             const cancelRenameBtn = document.getElementById('cancelRename');
 
+            // New folder elements
+            const newFolderBtn = document.getElementById('newFolderBtn');
+            const newFolderModal = document.getElementById('newFolderModal');
+            const newFolderNameInput = document.getElementById('newFolderName');
+            const createNewFolderBtn = document.getElementById('createNewFolder');
+            const cancelNewFolderBtn = document.getElementById('cancelNewFolder');
+
+            // Rename folder modal
+            const renameFolderModal = document.getElementById('renameFolderModal');
+            const renameFolderNameInput = document.getElementById('renameFolderName');
+            const confirmRenameFolderBtn = document.getElementById('confirmRenameFolder');
+            const cancelRenameFolderBtn = document.getElementById('cancelRenameFolder');
+
             // Initialize the application
             loadProject();
             updateFileList();
@@ -251,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Event Listeners
             runBtn.addEventListener('click', runCode);
             newFileBtn.addEventListener('click', showNewFileModal);
+            newFolderBtn.addEventListener('click', showNewFolderModal);
             editor.addEventListener('input', handleEditorChange);
             editor.addEventListener('keyup', updateCursorPosition);
             editor.addEventListener('click', updateCursorPosition);
@@ -260,11 +303,17 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelNewFileBtn.addEventListener('click', hideNewFileModal);
             confirmRenameBtn.addEventListener('click', confirmRename);
             cancelRenameBtn.addEventListener('click', hideRenameModal);
+            createNewFolderBtn.addEventListener('click', createNewFolder);
+            cancelNewFolderBtn.addEventListener('click', hideNewFolderModal);
+            confirmRenameFolderBtn.addEventListener('click', confirmRenameFolder);
+            cancelRenameFolderBtn.addEventListener('click', hideRenameFolderModal);
 
             // Close modals when clicking outside
             window.addEventListener('click', function(e) {
                 if (e.target === newFileModal) hideNewFileModal();
                 if (e.target === renameFileModal) hideRenameModal();
+                if (e.target === newFolderModal) hideNewFolderModal();
+                if (e.target === renameFolderModal) hideRenameFolderModal();
             });
 
             // Handle Enter key in modals
@@ -274,6 +323,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             renameFileNameInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') confirmRename();
+            });
+
+            newFolderNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') createNewFolder();
+            });
+            renameFolderNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') confirmRenameFolder();
             });
 
             // Project Management Functions
@@ -316,33 +372,129 @@ document.addEventListener('DOMContentLoaded', function() {
                 return icons[type] || icons.default;
             }
 
+            // Folder utilities
+            function normalizeFolderPath(path) {
+                let p = (path || '').trim();
+                p = p.replace(/\\+/g, '/');
+                p = p.replace(/^\/+|\/+$/g, '');
+                return p;
+            }
+
+            function ensureFolderPath(folderPath) {
+                const p = normalizeFolderPath(folderPath);
+                if (!p) return;
+                const parts = p.split('/');
+                let accum = '';
+                for (const part of parts) {
+                    accum = accum ? accum + '/' + part : part;
+                    if (!currentProject.folders.includes(accum)) {
+                        currentProject.folders.push(accum);
+                    }
+                }
+            }
+
+            function getDirname(path) {
+                const idx = path.lastIndexOf('/');
+                return idx === -1 ? '' : path.slice(0, idx);
+            }
+
             function updateFileList() {
                 fileListContainer.innerHTML = '';
-                
-                Object.keys(currentProject.files).forEach(filename => {
-                    const file = currentProject.files[filename];
-                    const fileElement = document.createElement('div');
-                    fileElement.className = `file-item ${filename === currentProject.currentFile ? 'active' : ''}`;
-                    
-                    fileElement.innerHTML = `
-                        <div class="file-name">
-                            <span class="file-icon ${file.type}"></span>
-                            <span>${filename}${file.modified ? ' •' : ''}</span>
-                        </div>
-                        <div class="file-actions">
-                            <button class="file-action-btn" onclick="renameFile('${filename}')" title="Rename">✏️</button>
-                            <button class="file-action-btn" onclick="deleteFile('${filename}')" title="Delete">🗑️</button>
-                        </div>
-                    `;
-                    
-                    fileElement.addEventListener('click', (e) => {
-                        if (!e.target.classList.contains('file-action-btn')) {
-                            switchToFile(filename);
+
+                // Build tree
+                const root = { type: 'folder', name: '', path: '', children: new Map() };
+
+                function addFolder(p) {
+                    if (!p) return;
+                    const parts = p.split('/');
+                    let node = root;
+                    let accum = '';
+                    for (const part of parts) {
+                        accum = accum ? accum + '/' + part : part;
+                        if (!node.children.has(part)) {
+                            node.children.set(part, { type: 'folder', name: part, path: accum, children: new Map() });
                         }
-                    });
-                    
-                    fileListContainer.appendChild(fileElement);
+                        node = node.children.get(part);
+                    }
+                }
+
+                (currentProject.folders || []).forEach(addFolder);
+
+                Object.keys(currentProject.files).forEach(path => {
+                    const parts = path.split('/');
+                    let node = root;
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const seg = parts[i];
+                        const accum = parts.slice(0, i + 1).join('/');
+                        if (!node.children.has(seg)) {
+                            node.children.set(seg, { type: 'folder', name: seg, path: accum, children: new Map() });
+                        }
+                        node = node.children.get(seg);
+                    }
+                    const fileName = parts[parts.length - 1];
+                    node.children.set(fileName, { type: 'file', name: fileName, path });
                 });
+
+                function renderNode(node, container) {
+                    if (node.type === 'folder') {
+                        if (node.path !== '') {
+                            const isExpanded = currentProject.expandedFolders.includes(node.path);
+                            const el = document.createElement('div');
+                            el.className = 'folder-item';
+                            el.innerHTML = `
+                                <div class="folder-header" data-path="${node.path}">
+                                    <span class="folder-toggle">${isExpanded ? '▼' : '▶'}</span>
+                                    <span class="folder-icon"></span>
+                                    <span class="folder-name">${node.name}</span>
+                                </div>
+                                <div class="folder-actions">
+                                    <button class="folder-action-btn" onclick="renameFolder('${node.path}')" title="Rename">✏️</button>
+                                    <button class="folder-action-btn" onclick="deleteFolder('${node.path}')" title="Delete">🗑️</button>
+                                </div>
+                            `;
+                            el.querySelector('.folder-header').addEventListener('click', () => {
+                                const idx = currentProject.expandedFolders.indexOf(node.path);
+                                if (idx === -1) currentProject.expandedFolders.push(node.path);
+                                else currentProject.expandedFolders.splice(idx, 1);
+                                saveProject();
+                                updateFileList();
+                            });
+                            container.appendChild(el);
+                            if (!isExpanded) return; // collapsed
+                        }
+
+                        const childrenWrap = document.createElement('div');
+                        childrenWrap.className = 'folder-children';
+                        container.appendChild(childrenWrap);
+                        const sorted = Array.from(node.children.values()).sort((a,b)=>{
+                            if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+                            return a.name.localeCompare(b.name);
+                        });
+                        sorted.forEach(child => renderNode(child, childrenWrap));
+                    } else {
+                        const file = currentProject.files[node.path];
+                        const fileElement = document.createElement('div');
+                        fileElement.className = `file-item ${node.path === currentProject.currentFile ? 'active' : ''}`;
+                        fileElement.innerHTML = `
+                            <div class="file-name">
+                                <span class="file-icon ${file.type}"></span>
+                                <span>${node.path}${file.modified ? ' •' : ''}</span>
+                            </div>
+                            <div class="file-actions">
+                                <button class="file-action-btn" onclick="renameFile('${node.path}')" title="Rename">✏️</button>
+                                <button class="file-action-btn" onclick="deleteFile('${node.path}')" title="Delete">🗑️</button>
+                            </div>
+                        `;
+                        fileElement.addEventListener('click', (e) => {
+                            if (!e.target.classList.contains('file-action-btn')) {
+                                switchToFile(node.path);
+                            }
+                        });
+                        container.appendChild(fileElement);
+                    }
+                }
+
+                renderNode(root, fileListContainer);
             }
 
             function updateTabs() {
@@ -442,6 +594,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const fileType = getFileType(filename);
                 const defaultContent = getDefaultContent(fileType);
+                // Ensure required folders exist
+                const folderPath = getDirname(filename);
+                if (folderPath) ensureFolderPath(folderPath);
                 
                 currentProject.files[filename] = {
                     content: defaultContent,
@@ -453,6 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideNewFileModal();
                 updateStatus(`Created new file: ${filename}`);
                 updateFileCount();
+                saveProject();
             }
 
             function getDefaultContent(type) {
@@ -498,6 +654,157 @@ This is a new markdown file. Start writing your documentation here.
                 };
                 
                 return templates[type] || '// New file\n// Start coding here...';
+            }
+
+            // New Folder Functions
+            function showNewFolderModal() {
+                newFolderNameInput.value = '';
+                newFolderModal.style.display = 'block';
+                newFolderNameInput.focus();
+            }
+
+            function hideNewFolderModal() {
+                newFolderModal.style.display = 'none';
+            }
+
+            function createNewFolder() {
+                const raw = newFolderNameInput.value.trim();
+                const folderPath = normalizeFolderPath(raw);
+                if (!folderPath) {
+                    alert('Please enter a folder name');
+                    return;
+                }
+                if (currentProject.files[folderPath]) {
+                    alert('A file with that path already exists');
+                    return;
+                }
+                ensureFolderPath(folderPath);
+                if (!currentProject.expandedFolders.includes(folderPath)) {
+                    currentProject.expandedFolders.push(folderPath);
+                }
+                saveProject();
+                updateFileList();
+                updateStatus(`Created folder: ${folderPath}`);
+                hideNewFolderModal();
+            }
+
+            // Folder Actions
+            window.renameFolder = function(folderPath) {
+                folderToRename = normalizeFolderPath(folderPath);
+                renameFolderNameInput.value = folderToRename;
+                renameFolderModal.style.display = 'block';
+                renameFolderNameInput.focus();
+                renameFolderNameInput.select();
+            };
+
+            window.deleteFolder = function(folderPath) {
+                const p = normalizeFolderPath(folderPath);
+                if (!p) return;
+                const allFiles = Object.keys(currentProject.files);
+                const filesUnder = allFiles.filter(f => f.startsWith(p + '/'));
+                if (filesUnder.length === 0) {
+                    // allow deleting empty folder tree entries
+                    currentProject.folders = (currentProject.folders || []).filter(fd => !(fd === p || fd.startsWith(p + '/')));
+                    currentProject.expandedFolders = (currentProject.expandedFolders || []).filter(fd => !(fd === p || fd.startsWith(p + '/')));
+                    updateFileList();
+                    saveProject();
+                    updateStatus(`Deleted folder: ${p}`);
+                    return;
+                }
+
+                if (filesUnder.length === allFiles.length) {
+                    alert('Cannot delete the last remaining files in the project');
+                    return;
+                }
+
+                if (confirm(`Delete folder "${p}" and ${filesUnder.length} file(s) inside? This cannot be undone.`)) {
+                    // Remove files under folder
+                    filesUnder.forEach(fp => {
+                        delete currentProject.files[fp];
+                        currentProject.openTabs = currentProject.openTabs.filter(t => t !== fp);
+                        if (currentProject.currentFile === fp) currentProject.currentFile = null;
+                    });
+
+                    // Remove folders under prefix
+                    currentProject.folders = (currentProject.folders || []).filter(fd => !(fd === p || fd.startsWith(p + '/')));
+                    currentProject.expandedFolders = (currentProject.expandedFolders || []).filter(fd => !(fd === p || fd.startsWith(p + '/')));
+
+                    // Switch to another file if needed
+                    const remaining = Object.keys(currentProject.files);
+                    if (!currentProject.currentFile && remaining.length > 0) {
+                        switchToFile(remaining[0]);
+                    } else {
+                        updateEditor();
+                    }
+
+                    updateFileList();
+                    updateTabs();
+                    updateFileCount();
+                    saveProject();
+                    updateStatus(`Deleted folder: ${p}`);
+                }
+            };
+
+            function hideRenameFolderModal() {
+                renameFolderModal.style.display = 'none';
+                folderToRename = null;
+            }
+
+            function confirmRenameFolder() {
+                const oldPath = folderToRename;
+                let newPath = normalizeFolderPath(renameFolderNameInput.value);
+                if (!oldPath) { hideRenameFolderModal(); return; }
+                if (!newPath || newPath === oldPath) { hideRenameFolderModal(); return; }
+                if (newPath.startsWith(oldPath + '/')) { alert('Cannot move a folder into its own descendant'); return; }
+
+                // Prevent colliding with file of same path
+                if (currentProject.files[newPath]) { alert('A file already exists at that path'); return; }
+
+                // Update folders
+                const updatedFolders = new Set();
+                (currentProject.folders || []).forEach(fd => {
+                    if (fd === oldPath || fd.startsWith(oldPath + '/')) {
+                        const suffix = fd.slice(oldPath.length);
+                        const nf = newPath + suffix;
+                        updatedFolders.add(nf.replace(/^\/+/, '').replace(/\/+$/, ''));
+                    } else {
+                        updatedFolders.add(fd);
+                    }
+                });
+                currentProject.folders = Array.from(updatedFolders);
+
+                // Update files
+                const newFiles = {};
+                Object.entries(currentProject.files).forEach(([fp, file]) => {
+                    if (fp.startsWith(oldPath + '/')) {
+                        const nf = newPath + fp.slice(oldPath.length);
+                        newFiles[nf] = file;
+                    } else {
+                        newFiles[fp] = file;
+                    }
+                });
+                currentProject.files = newFiles;
+
+                // Update tabs and current file
+                currentProject.openTabs = currentProject.openTabs.map(t => t.startsWith(oldPath + '/') ? (newPath + t.slice(oldPath.length)) : t);
+                if (currentProject.currentFile && currentProject.currentFile.startsWith(oldPath + '/')) {
+                    currentProject.currentFile = newPath + currentProject.currentFile.slice(oldPath.length);
+                }
+
+                // Update expanded folders
+                currentProject.expandedFolders = (currentProject.expandedFolders || []).map(fd => {
+                    if (fd === oldPath || fd.startsWith(oldPath + '/')) {
+                        return newPath + fd.slice(oldPath.length);
+                    }
+                    return fd;
+                });
+
+                saveProject();
+                updateFileList();
+                updateTabs();
+                updateEditor();
+                updateStatus(`Renamed folder to: ${newPath}`);
+                hideRenameFolderModal();
             }
 
             // File Actions
@@ -594,17 +901,34 @@ This is a new markdown file. Start writing your documentation here.
             }
 
             // Helper: Inline CSS/JS assets into an HTML string using DOMParser
-            function inlineAssets(html) {
+            function inlineAssets(html, htmlPath) {
                 try {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
+                    const baseDir = getDirname(htmlPath || '');
+
+                    function resolvePath(ref) {
+                        let r = (ref || '').split('#')[0].split('?')[0];
+                        if (/^https?:\/\//i.test(r) || /^\/\//.test(r)) return null; // external
+                        r = r.replace(/^\/+/, '');
+                        if (r.startsWith('./')) r = r.replace(/^\.\//, '');
+                        let combined = baseDir ? (baseDir ? baseDir + '/' + r : r) : r;
+                        const parts = combined.split('/');
+                        const stack = [];
+                        for (const part of parts) {
+                            if (!part || part === '.') continue;
+                            if (part === '..') stack.pop(); else stack.push(part);
+                        }
+                        return stack.join('/');
+                    }
 
                     // Inline CSS link tags
                     doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
                         const href = link.getAttribute('href');
-                        if (href && currentProject.files[href] && currentProject.files[href].type === 'css') {
+                        const key = resolvePath(href);
+                        if (key && currentProject.files[key] && currentProject.files[key].type === 'css') {
                             const styleEl = doc.createElement('style');
-                            styleEl.textContent = currentProject.files[href].content;
+                            styleEl.textContent = currentProject.files[key].content;
                             link.replaceWith(styleEl);
                         }
                     });
@@ -612,9 +936,10 @@ This is a new markdown file. Start writing your documentation here.
                     // Inline JS script tags
                     doc.querySelectorAll('script[src]').forEach(script => {
                         const src = script.getAttribute('src');
-                        if (src && currentProject.files[src] && currentProject.files[src].type === 'js') {
+                        const key = resolvePath(src);
+                        if (key && currentProject.files[key] && currentProject.files[key].type === 'js') {
                             const inlineScript = doc.createElement('script');
-                            inlineScript.textContent = currentProject.files[src].content;
+                            inlineScript.textContent = currentProject.files[key].content;
                             script.replaceWith(inlineScript);
                         }
                     });
@@ -654,7 +979,14 @@ This is a new markdown file. Start writing your documentation here.
                 }
                 
                 // Replace relative links with inline content via DOM parsing
-                const processedHtml = inlineAssets(htmlContent);
+                // Determine which HTML file we are running to resolve relative paths
+                let htmlFilename = 'index.html';
+                if (!currentProject.files['index.html']) {
+                    for (const [fname, f] of Object.entries(currentProject.files)) {
+                        if (f.type === 'html') { htmlFilename = fname; break; }
+                    }
+                }
+                const processedHtml = inlineAssets(htmlContent, htmlFilename);
                 
                 // Run the code
                 previewFrame.srcdoc = processedHtml;
