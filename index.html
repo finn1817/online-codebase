@@ -3,166 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Code Runner</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            height: 100vh;
-            background: #1e1e1e;
-            color: #fff;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background: #252526;
-            border-right: 1px solid #3e3e42;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .toolbar {
-            padding: 10px;
-            border-bottom: 1px solid #3e3e42;
-            background: #2d2d30;
-        }
-
-        .toolbar h2 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #cccccc;
-        }
-
-        .run-btn {
-            width: 100%;
-            padding: 8px 16px;
-            background: #0e639c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .run-btn:hover {
-            background: #1177bb;
-        }
-
-        .file-list {
-            flex: 1;
-            padding: 10px;
-        }
-
-        .file-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 4px;
-            margin-bottom: 2px;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-
-        .file-item:hover {
-            background: #2a2d2e;
-        }
-
-        .file-item.active {
-            background: #094771;
-            color: #ffffff;
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tabs {
-            display: flex;
-            background: #2d2d30;
-            border-bottom: 1px solid #3e3e42;
-        }
-
-        .tab {
-            padding: 12px 20px;
-            cursor: pointer;
-            border-right: 1px solid #3e3e42;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-
-        .tab:hover {
-            background: #37373d;
-        }
-
-        .tab.active {
-            background: #1e1e1e;
-            color: #ffffff;
-        }
-
-        .content-area {
-            flex: 1;
-            position: relative;
-        }
-
-        .editor {
-            width: 100%;
-            height: 100%;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            border: none;
-            outline: none;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            padding: 20px;
-            resize: none;
-            tab-size: 2;
-        }
-
-        .preview-container {
-            width: 100%;
-            height: 100%;
-            background: white;
-            position: absolute;
-            top: 0;
-            left: 0;
-            display: none;
-        }
-
-        .preview-container.active {
-            display: block;
-        }
-
-        .preview-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: white;
-        }
-
-        .status-bar {
-            height: 22px;
-            background: #007acc;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-size: 12px;
-            color: white;
-        }
-    </style>
+    <title>Advanced Web Code Runner</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
@@ -170,26 +12,27 @@
             <div class="toolbar">
                 <h2>Web Code Runner</h2>
                 <button class="run-btn" id="runBtn">▶ Run Code</button>
+                <button class="new-file-btn" id="newFileBtn">+ New File</button>
             </div>
             
             <div class="file-list">
-                <div class="file-item active" id="htmlFile" data-file="index.html">
-                    📄 index.html
+                <h3>Project Files</h3>
+                <div id="fileListContainer">
+                    <!-- Files will be dynamically added here -->
                 </div>
             </div>
         </div>
 
         <div class="main-content">
-            <div class="tabs">
-                <div class="tab active" id="editorTab" data-tab="editor">Editor</div>
-                <div class="tab" id="previewTab" data-tab="preview">Preview</div>
+            <div class="tabs" id="tabsContainer">
+                <!-- Tabs will be dynamically added here -->
             </div>
 
             <div class="content-area">
                 <textarea 
                     class="editor" 
                     id="editor" 
-                    placeholder="Start coding your HTML here..."
+                    placeholder="Select a file to start coding..."
                 ></textarea>
 
                 <div class="preview-container" id="preview-container">
@@ -198,108 +41,248 @@
             </div>
 
             <div class="status-bar">
-                <span id="status-text">Ready</span>
+                <div class="status-info">
+                    <span id="status-text">Ready</span>
+                    <span id="file-info">No file selected</span>
+                </div>
+                <div class="status-info">
+                    <span id="line-info">Ln 1, Col 1</span>
+                    <span id="file-count">0 files</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New File Modal -->
+    <div id="newFileModal" class="modal">
+        <div class="modal-content">
+            <h3>Create New File</h3>
+            <input type="text" id="newFileName" placeholder="Enter filename (e.g., style.css, script.js)">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelNewFile">Cancel</button>
+                <button class="modal-btn primary" id="createNewFile">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename File Modal -->
+    <div id="renameFileModal" class="modal">
+        <div class="modal-content">
+            <h3>Rename File</h3>
+            <input type="text" id="renameFileName" placeholder="Enter new filename">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelRename">Cancel</button>
+                <button class="modal-btn primary" id="confirmRename">Rename</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Wait for DOM to be fully loaded
+        // Enhanced Web Code Runner with Multi-File Support
         document.addEventListener('DOMContentLoaded', function() {
             
-            // Global state to manage our virtual file system
+            // Global state management
             let currentProject = {
                 files: {
-                    'index.html': `<!DOCTYPE html>
+                    'index.html': {
+                        content: `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web Project</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 500px;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-        
-        button:hover {
-            background: #5a67d8;
-        }
-    </style>
+                        <title>My Web Project</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to Web Code Runner!</h1>
-        <p>This is your starting HTML file. Edit the code and click "Run Code" to see your changes!</p>
-        <button onclick="alert('Hello from JavaScript!')">Click me!</button>
+        <h1>Welcome to Advanced Web Code Runner!</h1>
+        <p>This is your main HTML file. Create new files and organize your project!</p>
+        <button onclick="changeColor()">Change Background</button>
+        <div id="content">
+            <p>Add more content here...</p>
+        </div>
     </div>
-    
-    <script>
-        console.log('Your web project is running!');
-    <\/script>
+    <script src="script.js"><\/script>
 </body>
-</html>`
+</html>`,
+                        type: 'html',
+                        modified: false
+                    },
+                    'styles.css': {
+                        content: `/* Main stylesheet for your project */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    transition: background 0.5s ease;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 2.5em;
+}
+
+button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    margin: 10px;
+}
+
+button:hover {
+    background: #5a67d8;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#content {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}`,
+                        type: 'css',
+                        modified: false
+                    },
+                    'script.js': {
+                        content: `// Main JavaScript file for your project
+console.log('Web Code Runner initialized!');
+
+// Array of background gradients
+var backgrounds = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+];
+
+var currentBgIndex = 0;
+
+// Function to change background color
+function changeColor() {
+    currentBgIndex = (currentBgIndex + 1) % backgrounds.length;
+    document.body.style.background = backgrounds[currentBgIndex];
+    
+    // Add some dynamic content
+    var content = document.getElementById('content');
+    content.innerHTML += '<p>Background changed! (' + (currentBgIndex + 1) + '/' + backgrounds.length + ')</p>';
+    
+    console.log('Background changed to:', backgrounds[currentBgIndex]);
+}
+
+// Add some interactivity when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - Ready for interaction!');
+    
+    // You can add more initialization code here
+    var container = document.querySelector('.container');
+    if (container) {
+        container.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.02)';
+        });
+        
+        container.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    }
+});`,
+                        type: 'js',
+                        modified: false
+                    }
                 },
-                currentFile: 'index.html'
+                currentFile: 'index.html',
+                openTabs: ['index.html', 'styles.css', 'script.js']
             };
+
+            let fileToRename = null;
 
             // Get DOM elements
             const editor = document.getElementById('editor');
             const runBtn = document.getElementById('runBtn');
-            const editorTab = document.getElementById('editorTab');
-            const previewTab = document.getElementById('previewTab');
+            const newFileBtn = document.getElementById('newFileBtn');
+            const fileListContainer = document.getElementById('fileListContainer');
+            const tabsContainer = document.getElementById('tabsContainer');
             const previewContainer = document.getElementById('preview-container');
             const previewFrame = document.getElementById('preview-frame');
             const statusText = document.getElementById('status-text');
+            const fileInfo = document.getElementById('file-info');
+            const lineInfo = document.getElementById('line-info');
+            const fileCount = document.getElementById('file-count');
 
-            // Initialize the app
+            // Modal elements
+            const newFileModal = document.getElementById('newFileModal');
+            const newFileNameInput = document.getElementById('newFileName');
+            const createNewFileBtn = document.getElementById('createNewFile');
+            const cancelNewFileBtn = document.getElementById('cancelNewFile');
+            
+            const renameFileModal = document.getElementById('renameFileModal');
+            const renameFileNameInput = document.getElementById('renameFileName');
+            const confirmRenameBtn = document.getElementById('confirmRename');
+            const cancelRenameBtn = document.getElementById('cancelRename');
+
+            // Initialize the application
             loadProject();
+            updateFileList();
+            updateTabs();
             updateEditor();
-            updateStatus('Project loaded - Start coding!');
+            updateStatus('Project loaded successfully');
+            updateFileCount();
 
-            // Event listeners using proper DOM methods instead of inline handlers
+            // Event Listeners
             runBtn.addEventListener('click', runCode);
-            editorTab.addEventListener('click', () => switchTab('editor'));
-            previewTab.addEventListener('click', () => switchTab('preview'));
-            editor.addEventListener('input', saveCurrentFile);
+            newFileBtn.addEventListener('click', showNewFileModal);
+            editor.addEventListener('input', handleEditorChange);
+            editor.addEventListener('keyup', updateCursorPosition);
+            editor.addEventListener('click', updateCursorPosition);
 
-            // Load project from localStorage or use default
+            // Modal event listeners
+            createNewFileBtn.addEventListener('click', createNewFile);
+            cancelNewFileBtn.addEventListener('click', hideNewFileModal);
+            confirmRenameBtn.addEventListener('click', confirmRename);
+            cancelRenameBtn.addEventListener('click', hideRenameModal);
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                if (e.target === newFileModal) hideNewFileModal();
+                if (e.target === renameFileModal) hideRenameModal();
+            });
+
+            // Handle Enter key in modals
+            newFileNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') createNewFile();
+            });
+
+            renameFileNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') confirmRename();
+            });
+
+            // Project Management Functions
             function loadProject() {
-                const saved = localStorage.getItem('webCodeRunner_project');
+                const saved = localStorage.getItem('advancedWebCodeRunner_project');
                 if (saved) {
                     try {
-                        currentProject = JSON.parse(saved);
+                        const parsed = JSON.parse(saved);
+                        currentProject = { ...currentProject, ...parsed };
                         updateStatus('Project loaded from storage');
                     } catch (e) {
                         updateStatus('Error loading project, using default');
@@ -307,79 +290,477 @@
                 }
             }
 
-            // Save current project to localStorage
             function saveProject() {
                 try {
-                    localStorage.setItem('webCodeRunner_project', JSON.stringify(currentProject));
+                    localStorage.setItem('advancedWebCodeRunner_project', JSON.stringify(currentProject));
                 } catch (e) {
                     updateStatus('Error saving project');
                 }
             }
 
-            // Update the editor with current file content
-            function updateEditor() {
-                editor.value = currentProject.files[currentProject.currentFile] || '';
+            // File Management Functions
+            function getFileType(filename) {
+                const ext = filename.split('.').pop().toLowerCase();
+                return ['html', 'css', 'js', 'json', 'md'].includes(ext) ? ext : 'default';
             }
 
-            // Save the current file content from editor
-            function saveCurrentFile() {
-                currentProject.files[currentProject.currentFile] = editor.value;
+            function getFileIcon(type) {
+                const icons = {
+                    html: '🌐',
+                    css: '🎨', 
+                    js: '⚡',
+                    json: '📄',
+                    md: '📝',
+                    default: '📄'
+                };
+                return icons[type] || icons.default;
+            }
+
+            function updateFileList() {
+                fileListContainer.innerHTML = '';
+                
+                Object.keys(currentProject.files).forEach(filename => {
+                    const file = currentProject.files[filename];
+                    const fileElement = document.createElement('div');
+                    fileElement.className = `file-item ${filename === currentProject.currentFile ? 'active' : ''}`;
+                    
+                    fileElement.innerHTML = `
+                        <div class="file-name">
+                            <span class="file-icon ${file.type}"></span>
+                            <span>${filename}${file.modified ? ' •' : ''}</span>
+                        </div>
+                        <div class="file-actions">
+                            <button class="file-action-btn" onclick="renameFile('${filename}')" title="Rename">✏️</button>
+                            <button class="file-action-btn" onclick="deleteFile('${filename}')" title="Delete">🗑️</button>
+                        </div>
+                    `;
+                    
+                    fileElement.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('file-action-btn')) {
+                            switchToFile(filename);
+                        }
+                    });
+                    
+                    fileListContainer.appendChild(fileElement);
+                });
+            }
+
+            function updateTabs() {
+                tabsContainer.innerHTML = '';
+                
+                currentProject.openTabs.forEach(filename => {
+                    if (currentProject.files[filename]) {
+                        const file = currentProject.files[filename];
+                        const tabElement = document.createElement('div');
+                        tabElement.className = `tab ${filename === currentProject.currentFile ? 'active' : ''}`;
+                        
+                        tabElement.innerHTML = `
+                            <span class="file-icon ${file.type}"></span>
+                            <span>${filename}${file.modified ? ' •' : ''}</span>
+                            <button class="tab-close" onclick="closeTab('${filename}')" title="Close">×</button>
+                        `;
+                        
+                        tabElement.addEventListener('click', (e) => {
+                            if (!e.target.classList.contains('tab-close')) {
+                                switchToFile(filename);
+                            }
+                        });
+                        
+                        tabsContainer.appendChild(tabElement);
+                    }
+                });
+            }
+
+            function switchToFile(filename) {
+                if (!currentProject.files[filename]) return;
+                
+                // Save current file before switching
+                if (currentProject.currentFile && currentProject.files[currentProject.currentFile]) {
+                    currentProject.files[currentProject.currentFile].content = editor.value;
+                }
+                
+                currentProject.currentFile = filename;
+                
+                // Add to open tabs if not already there
+                if (!currentProject.openTabs.includes(filename)) {
+                    currentProject.openTabs.push(filename);
+                }
+                
+                updateEditor();
+                updateFileList();
+                updateTabs();
+                updateFileInfo();
                 saveProject();
             }
 
-            // Switch between editor and preview tabs
-            function switchTab(tabName) {
-                // Update tab appearance
-                editorTab.classList.remove('active');
-                previewTab.classList.remove('active');
-                
-                if (tabName === 'editor') {
-                    editorTab.classList.add('active');
+            function updateEditor() {
+                if (currentProject.currentFile && currentProject.files[currentProject.currentFile]) {
+                    editor.value = currentProject.files[currentProject.currentFile].content;
                     editor.style.display = 'block';
                     previewContainer.classList.remove('active');
-                    updateStatus('Switched to editor');
                 } else {
-                    previewTab.classList.add('active');
-                    editor.style.display = 'none';
-                    previewContainer.classList.add('active');
-                    updateStatus('Switched to preview');
+                    editor.value = '';
+                }
+                updateCursorPosition();
+            }
+
+            function handleEditorChange() {
+                if (currentProject.currentFile && currentProject.files[currentProject.currentFile]) {
+                    const file = currentProject.files[currentProject.currentFile];
+                    file.content = editor.value;
+                    file.modified = true;
+                    
+                    updateFileList();
+                    updateTabs();
+                    updateFileInfo();
                 }
             }
 
-            // Run the code in the preview iframe
-            function runCode() {
-                saveCurrentFile();
-                const htmlContent = currentProject.files['index.html'] || '';
-                previewFrame.srcdoc = htmlContent;
-                switchTab('preview');
-                updateStatus('Code executed successfully!');
+            // New File Functions
+            function showNewFileModal() {
+                newFileNameInput.value = '';
+                newFileModal.style.display = 'block';
+                newFileNameInput.focus();
             }
 
-            // Update status bar message
-            function updateStatus(message) {
-                statusText.textContent = message;
+            function hideNewFileModal() {
+                newFileModal.style.display = 'none';
             }
 
-            // Handle keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    saveCurrentFile();
-                    updateStatus('File saved manually');
+            function createNewFile() {
+                const filename = newFileNameInput.value.trim();
+                
+                if (!filename) {
+                    alert('Please enter a filename');
+                    return;
                 }
                 
+                if (currentProject.files[filename]) {
+                    alert('File already exists');
+                    return;
+                }
+                
+                const fileType = getFileType(filename);
+                const defaultContent = getDefaultContent(fileType);
+                
+                currentProject.files[filename] = {
+                    content: defaultContent,
+                    type: fileType,
+                    modified: false
+                };
+                
+                switchToFile(filename);
+                hideNewFileModal();
+                updateStatus(`Created new file: ${filename}`);
+                updateFileCount();
+            }
+
+            function getDefaultContent(type) {
+                const templates = {
+                    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Page</title>
+</head>
+<body>
+    <h1>New HTML File</h1>
+    <p>Start building your content here...</p>
+</body>
+</html>`,
+                    css: `/* New stylesheet */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Add your styles here */`,
+                    js: `// New JavaScript file
+console.log('New JavaScript file loaded');
+
+// Add your code here`,
+                    json: `{
+    "name": "new-file",
+    "version": "1.0.0",
+    "description": "A new JSON file"
+}`,
+                    md: `# New Markdown File
+
+This is a new markdown file. Start writing your documentation here.
+
+## Features
+
+- Feature 1
+- Feature 2
+- Feature 3`
+                };
+                
+                return templates[type] || '// New file\n// Start coding here...';
+            }
+
+            // File Actions
+            window.renameFile = function(filename) {
+                fileToRename = filename;
+                renameFileNameInput.value = filename;
+                renameFileModal.style.display = 'block';
+                renameFileNameInput.focus();
+                renameFileNameInput.select();
+            };
+
+            window.deleteFile = function(filename) {
+                if (Object.keys(currentProject.files).length <= 1) {
+                    alert('Cannot delete the last file');
+                    return;
+                }
+                
+                if (confirm(`Are you sure you want to delete "${filename}"?`)) {
+                    delete currentProject.files[filename];
+                    
+                    // Remove from open tabs
+                    currentProject.openTabs = currentProject.openTabs.filter(f => f !== filename);
+                    
+                    // Switch to another file if this was current
+                    if (currentProject.currentFile === filename) {
+                        const remainingFiles = Object.keys(currentProject.files);
+                        currentProject.currentFile = remainingFiles[0] || null;
+                    }
+                    
+                    updateFileList();
+                    updateTabs();
+                    updateEditor();
+                    updateFileCount();
+                    saveProject();
+                    updateStatus(`Deleted file: ${filename}`);
+                }
+            };
+
+            window.closeTab = function(filename) {
+                currentProject.openTabs = currentProject.openTabs.filter(f => f !== filename);
+                
+                if (currentProject.currentFile === filename && currentProject.openTabs.length > 0) {
+                    switchToFile(currentProject.openTabs[currentProject.openTabs.length - 1]);
+                } else if (currentProject.openTabs.length === 0) {
+                    const firstFile = Object.keys(currentProject.files)[0];
+                    if (firstFile) {
+                        switchToFile(firstFile);
+                    }
+                }
+                
+                updateTabs();
+                saveProject();
+            };
+
+            function hideRenameModal() {
+                renameFileModal.style.display = 'none';
+                fileToRename = null;
+            }
+
+            function confirmRename() {
+                const newName = renameFileNameInput.value.trim();
+                
+                if (!newName || newName === fileToRename) {
+                    hideRenameModal();
+                    return;
+                }
+                
+                if (currentProject.files[newName]) {
+                    alert('A file with that name already exists');
+                    return;
+                }
+                
+                // Rename the file
+                currentProject.files[newName] = currentProject.files[fileToRename];
+                currentProject.files[newName].type = getFileType(newName);
+                delete currentProject.files[fileToRename];
+                
+                // Update references
+                if (currentProject.currentFile === fileToRename) {
+                    currentProject.currentFile = newName;
+                }
+                
+                const tabIndex = currentProject.openTabs.indexOf(fileToRename);
+                if (tabIndex !== -1) {
+                    currentProject.openTabs[tabIndex] = newName;
+                }
+                
+                updateFileList();
+                updateTabs();
+                updateFileInfo();
+                saveProject();
+                hideRenameModal();
+                updateStatus(`Renamed file to: ${newName}`);
+            }
+
+            // Helper: Inline CSS/JS assets into an HTML string using DOMParser
+            function inlineAssets(html) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Inline CSS link tags
+                    doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
+                        const href = link.getAttribute('href');
+                        if (href && currentProject.files[href] && currentProject.files[href].type === 'css') {
+                            const styleEl = doc.createElement('style');
+                            styleEl.textContent = currentProject.files[href].content;
+                            link.replaceWith(styleEl);
+                        }
+                    });
+
+                    // Inline JS script tags
+                    doc.querySelectorAll('script[src]').forEach(script => {
+                        const src = script.getAttribute('src');
+                        if (src && currentProject.files[src] && currentProject.files[src].type === 'js') {
+                            const inlineScript = doc.createElement('script');
+                            inlineScript.textContent = currentProject.files[src].content;
+                            script.replaceWith(inlineScript);
+                        }
+                    });
+
+                    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+                } catch (err) {
+                    // If parsing fails, fall back to original HTML
+                    return html;
+                }
+            }
+
+            // Run Code Function
+            function runCode() {
+                // Save current file
+                if (currentProject.currentFile) {
+                    handleEditorChange();
+                }
+                
+                let htmlContent = '';
+                
+                // Find HTML file (prioritize index.html)
+                if (currentProject.files['index.html']) {
+                    htmlContent = currentProject.files['index.html'].content;
+                } else {
+                    // Find any HTML file
+                    for (const [filename, file] of Object.entries(currentProject.files)) {
+                        if (file.type === 'html') {
+                            htmlContent = file.content;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!htmlContent) {
+                    alert('No HTML file found to run');
+                    return;
+                }
+                
+                // Replace relative links with inline content via DOM parsing
+                const processedHtml = inlineAssets(htmlContent);
+                
+                // Run the code
+                previewFrame.srcdoc = processedHtml;
+                editor.style.display = 'none';
+                previewContainer.classList.add('active');
+                updateStatus('Code executed successfully!');
+                
+                // Mark files as saved
+                Object.values(currentProject.files).forEach(file => {
+                    file.modified = false;
+                });
+                updateFileList();
+                updateTabs();
+                saveProject();
+            }
+
+            // UI Update Functions
+            function updateStatus(message) {
+                statusText.textContent = message;
+                setTimeout(() => {
+                    statusText.textContent = 'Ready';
+                }, 3000);
+            }
+
+            function updateFileInfo() {
+                if (currentProject.currentFile) {
+                    const file = currentProject.files[currentProject.currentFile];
+                    fileInfo.textContent = `${currentProject.currentFile} (${file.type.toUpperCase()})`;
+                } else {
+                    fileInfo.textContent = 'No file selected';
+                }
+            }
+
+            function updateFileCount() {
+                const count = Object.keys(currentProject.files).length;
+                fileCount.textContent = `${count} file${count !== 1 ? 's' : ''}`;
+            }
+
+            function updateCursorPosition() {
+                const textarea = editor;
+                const text = textarea.value;
+                const cursorPos = textarea.selectionStart;
+                
+                const lines = text.substring(0, cursorPos).split('\n');
+                const line = lines.length;
+                const col = lines[lines.length - 1].length + 1;
+                
+                lineInfo.textContent = `Ln ${line}, Col ${col}`;
+            }
+
+            // Keyboard Shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+S / Cmd+S - Save
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    handleEditorChange();
+                    saveProject();
+                    updateStatus('Project saved');
+                }
+                
+                // Ctrl+Enter / Cmd+Enter - Run
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
                     runCode();
                 }
+                
+                // Ctrl+N / Cmd+N - New File
+                if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                    e.preventDefault();
+                    showNewFileModal();
+                }
+                
+                // Ctrl+W / Cmd+W - Close Tab
+                if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+                    e.preventDefault();
+                    if (currentProject.currentFile && currentProject.openTabs.length > 1) {
+                        closeTab(currentProject.currentFile);
+                    }
+                }
+                
+                // Switch between editor and preview with Ctrl+` or Cmd+`
+                if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+                    e.preventDefault();
+                    const isPreviewActive = previewContainer.classList.contains('active');
+                    if (isPreviewActive) {
+                        editor.style.display = 'block';
+                        previewContainer.classList.remove('active');
+                        updateStatus('Switched to editor');
+                    } else {
+                        runCode();
+                    }
+                }
             });
 
-            // Auto-save every 30 seconds
-            setInterval(function() {
-                if (editor.value !== '') {
-                    saveCurrentFile();
-                }
-            }, 30000);
+            // Auto-save functionality
+            let autoSaveTimeout;
+            editor.addEventListener('input', function() {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    saveProject();
+                }, 2000); // Auto-save after 2 seconds of inactivity
+            });
+
+            // Initialize file info and cursor position
+            updateFileInfo();
+            updateCursorPosition();
         });
     </script>
 </body>
