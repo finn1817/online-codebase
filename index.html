@@ -19,13 +19,11 @@
             overflow: hidden;
         }
 
-        /* Main layout container */
         .container {
             display: flex;
             height: 100vh;
         }
 
-        /* Left sidebar for file management and controls */
         .sidebar {
             width: 250px;
             background: #252526;
@@ -34,7 +32,6 @@
             flex-direction: column;
         }
 
-        /* Toolbar at top of sidebar */
         .toolbar {
             padding: 10px;
             border-bottom: 1px solid #3e3e42;
@@ -47,7 +44,6 @@
             color: #cccccc;
         }
 
-        /* Run button styling */
         .run-btn {
             width: 100%;
             padding: 8px 16px;
@@ -64,7 +60,6 @@
             background: #1177bb;
         }
 
-        /* File list in sidebar */
         .file-list {
             flex: 1;
             padding: 10px;
@@ -88,14 +83,12 @@
             color: #ffffff;
         }
 
-        /* Main editor and preview area */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
 
-        /* Tabs for switching between editor and preview */
         .tabs {
             display: flex;
             background: #2d2d30;
@@ -119,13 +112,11 @@
             color: #ffffff;
         }
 
-        /* Content area that switches between editor and preview */
         .content-area {
             flex: 1;
             position: relative;
         }
 
-        /* Code editor textarea */
         .editor {
             width: 100%;
             height: 100%;
@@ -141,11 +132,13 @@
             tab-size: 2;
         }
 
-        /* Preview iframe container */
         .preview-container {
             width: 100%;
             height: 100%;
             background: white;
+            position: absolute;
+            top: 0;
+            left: 0;
             display: none;
         }
 
@@ -153,14 +146,13 @@
             display: block;
         }
 
-        /* Preview iframe */
         .preview-frame {
             width: 100%;
             height: 100%;
             border: none;
+            background: white;
         }
 
-        /* Status bar at bottom */
         .status-bar {
             height: 22px;
             background: #007acc;
@@ -174,46 +166,37 @@
 </head>
 <body>
     <div class="container">
-        <!-- Left sidebar for project management -->
         <div class="sidebar">
             <div class="toolbar">
                 <h2>Web Code Runner</h2>
-                <button class="run-btn" onclick="runCode()">▶ Run Code</button>
+                <button class="run-btn" id="runBtn">▶ Run Code</button>
             </div>
             
-            <!-- List of files in current project -->
             <div class="file-list">
-                <div class="file-item active" onclick="switchFile('index.html')" data-file="index.html">
+                <div class="file-item active" id="htmlFile" data-file="index.html">
                     📄 index.html
                 </div>
             </div>
         </div>
 
-        <!-- Main content area -->
         <div class="main-content">
-            <!-- Tabs for switching between editor and preview -->
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('editor')">Editor</div>
-                <div class="tab" onclick="switchTab('preview')">Preview</div>
+                <div class="tab active" id="editorTab" data-tab="editor">Editor</div>
+                <div class="tab" id="previewTab" data-tab="preview">Preview</div>
             </div>
 
-            <!-- Content area -->
             <div class="content-area">
-                <!-- Code editor -->
                 <textarea 
                     class="editor" 
                     id="editor" 
                     placeholder="Start coding your HTML here..."
-                    oninput="saveCurrentFile()"
                 ></textarea>
 
-                <!-- Preview iframe -->
                 <div class="preview-container" id="preview-container">
                     <iframe class="preview-frame" id="preview-frame"></iframe>
                 </div>
             </div>
 
-            <!-- Status bar -->
             <div class="status-bar">
                 <span id="status-text">Ready</span>
             </div>
@@ -221,10 +204,13 @@
     </div>
 
     <script>
-        // Global state to manage our virtual file system
-        let currentProject = {
-            files: {
-                'index.html': `<!DOCTYPE html>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Global state to manage our virtual file system
+            let currentProject = {
+                files: {
+                    'index.html': `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -281,146 +267,120 @@
     
     <script>
         console.log('Your web project is running!');
-    </script>
+    <\/script>
 </body>
 </html>`
-            },
-            currentFile: 'index.html'
-        };
+                },
+                currentFile: 'index.html'
+            };
 
-        // Initialize the app when page loads
-        window.onload = function() {
+            // Get DOM elements
+            const editor = document.getElementById('editor');
+            const runBtn = document.getElementById('runBtn');
+            const editorTab = document.getElementById('editorTab');
+            const previewTab = document.getElementById('previewTab');
+            const previewContainer = document.getElementById('preview-container');
+            const previewFrame = document.getElementById('preview-frame');
+            const statusText = document.getElementById('status-text');
+
+            // Initialize the app
             loadProject();
             updateEditor();
-            updateStatus('Project loaded');
-        };
+            updateStatus('Project loaded - Start coding!');
 
-        // Load project from localStorage or use default
-        function loadProject() {
-            const saved = localStorage.getItem('webCodeRunner_project');
-            if (saved) {
-                try {
-                    currentProject = JSON.parse(saved);
-                    updateStatus('Project loaded from storage');
-                } catch (e) {
-                    updateStatus('Error loading project, using default');
+            // Event listeners using proper DOM methods instead of inline handlers
+            runBtn.addEventListener('click', runCode);
+            editorTab.addEventListener('click', () => switchTab('editor'));
+            previewTab.addEventListener('click', () => switchTab('preview'));
+            editor.addEventListener('input', saveCurrentFile);
+
+            // Load project from localStorage or use default
+            function loadProject() {
+                const saved = localStorage.getItem('webCodeRunner_project');
+                if (saved) {
+                    try {
+                        currentProject = JSON.parse(saved);
+                        updateStatus('Project loaded from storage');
+                    } catch (e) {
+                        updateStatus('Error loading project, using default');
+                    }
                 }
             }
-        }
 
-        // Save current project to localStorage
-        function saveProject() {
-            try {
-                localStorage.setItem('webCodeRunner_project', JSON.stringify(currentProject));
-                updateStatus('Project saved');
-            } catch (e) {
-                updateStatus('Error saving project');
+            // Save current project to localStorage
+            function saveProject() {
+                try {
+                    localStorage.setItem('webCodeRunner_project', JSON.stringify(currentProject));
+                } catch (e) {
+                    updateStatus('Error saving project');
+                }
             }
-        }
 
-        // Update the editor with current file content
-        function updateEditor() {
-            const editor = document.getElementById('editor');
-            editor.value = currentProject.files[currentProject.currentFile] || '';
-        }
-
-        // Save the current file content from editor
-        function saveCurrentFile() {
-            const editor = document.getElementById('editor');
-            currentProject.files[currentProject.currentFile] = editor.value;
-            saveProject();
-        }
-
-        // Switch between different files (for future expansion)
-        function switchFile(fileName) {
-            // Save current file before switching
-            saveCurrentFile();
-            
-            // Switch to new file
-            currentProject.currentFile = fileName;
-            updateEditor();
-            
-            // Update UI
-            document.querySelectorAll('.file-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.querySelector(`[data-file="${fileName}"]`).classList.add('active');
-            
-            updateStatus(`Switched to ${fileName}`);
-        }
-
-        // Switch between editor and preview tabs
-        function switchTab(tabName) {
-            const editor = document.getElementById('editor');
-            const preview = document.getElementById('preview-container');
-            
-            // Update tab appearance
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            if (tabName === 'editor') {
-                editor.style.display = 'block';
-                preview.classList.remove('active');
-            } else {
-                editor.style.display = 'none';
-                preview.classList.add('active');
+            // Update the editor with current file content
+            function updateEditor() {
+                editor.value = currentProject.files[currentProject.currentFile] || '';
             }
-        }
 
-        // Run the code in the preview iframe
-        function runCode() {
-            saveCurrentFile(); // Make sure latest changes are saved
-            
-            const iframe = document.getElementById('preview-frame');
-            const htmlContent = currentProject.files['index.html'] || '';
-            
-            // Create a blob URL for the HTML content
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            // Load the content in iframe
-            iframe.src = url;
-            
-            // Switch to preview tab automatically
-            switchTab('preview');
-            document.querySelector('.tab:nth-child(2)').classList.add('active');
-            document.querySelector('.tab:nth-child(1)').classList.remove('active');
-            
-            updateStatus('Code executed successfully');
-            
-            // Clean up the blob URL after a short delay
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-            }, 1000);
-        }
+            // Save the current file content from editor
+            function saveCurrentFile() {
+                currentProject.files[currentProject.currentFile] = editor.value;
+                saveProject();
+            }
 
-        // Update status bar message
-        function updateStatus(message) {
-            document.getElementById('status-text').textContent = message;
-        }
+            // Switch between editor and preview tabs
+            function switchTab(tabName) {
+                // Update tab appearance
+                editorTab.classList.remove('active');
+                previewTab.classList.remove('active');
+                
+                if (tabName === 'editor') {
+                    editorTab.classList.add('active');
+                    editor.style.display = 'block';
+                    previewContainer.classList.remove('active');
+                    updateStatus('Switched to editor');
+                } else {
+                    previewTab.classList.add('active');
+                    editor.style.display = 'none';
+                    previewContainer.classList.add('active');
+                    updateStatus('Switched to preview');
+                }
+            }
 
-        // Handle keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl+S or Cmd+S to save
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
+            // Run the code in the preview iframe
+            function runCode() {
                 saveCurrentFile();
-                updateStatus('File saved');
+                const htmlContent = currentProject.files['index.html'] || '';
+                previewFrame.srcdoc = htmlContent;
+                switchTab('preview');
+                updateStatus('Code executed successfully!');
             }
-            
-            // Ctrl+Enter or Cmd+Enter to run
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                runCode();
-            }
-        });
 
-        // Auto-save every 30 seconds
-        setInterval(function() {
-            saveCurrentFile();
-        }, 30000);
+            // Update status bar message
+            function updateStatus(message) {
+                statusText.textContent = message;
+            }
+
+            // Handle keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveCurrentFile();
+                    updateStatus('File saved manually');
+                }
+                
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    runCode();
+                }
+            });
+
+            // Auto-save every 30 seconds
+            setInterval(function() {
+                if (editor.value !== '') {
+                    saveCurrentFile();
+                }
+            }, 30000);
+        });
     </script>
 </body>
 </html>
